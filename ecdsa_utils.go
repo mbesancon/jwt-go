@@ -4,22 +4,45 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
+	"fmt"
 )
 
-var (
-	ErrNotECPublicKey  = errors.New("Key is not a valid ECDSA public key")
-	ErrNotECPrivateKey = errors.New("Key is not a valid ECDSA private key")
-)
+// ErrNotECKey error for invalid EC key, implements the ErrKey interface
+type ErrNotECKey struct {
+	public bool
+	key    interface{}
+}
 
-// Parse PEM encoded Elliptic Curve Private Key Structure
+func (e ErrNotECKey) Error() string {
+	if e.public {
+		return fmt.Sprintf("Key is not a valid ECDSA public key: %#v", e.key)
+	}
+	return fmt.Sprintf("Key is not a valid ECDSA private key: %#v", e.key)
+}
+
+// Key returns the key to complete the ErrKey interface
+func (e ErrNotECKey) Key() interface{} {
+	return e.key
+}
+
+// ErrNotECPublicKey custom error for EC public key
+func ErrNotECPublicKey(key interface{}) ErrKey {
+	return ErrNotECKey{public: true, key: key}
+}
+
+// ErrNotECPrivateKey custom error for EC public key
+func ErrNotECPrivateKey(key interface{}) ErrKey {
+	return ErrNotECKey{public: false, key: key}
+}
+
+// ParseECPrivateKeyFromPEM parse PEM encoded Elliptic Curve Private Key Structure
 func ParseECPrivateKeyFromPEM(key []byte) (*ecdsa.PrivateKey, error) {
 	var err error
 
 	// Parse PEM block
 	var block *pem.Block
 	if block, _ = pem.Decode(key); block == nil {
-		return nil, ErrKeyMustBePEMEncoded
+		return nil, ErrKeyNotPEMEncoded{key: key}
 	}
 
 	// Parse the key
@@ -31,20 +54,19 @@ func ParseECPrivateKeyFromPEM(key []byte) (*ecdsa.PrivateKey, error) {
 	var pkey *ecdsa.PrivateKey
 	var ok bool
 	if pkey, ok = parsedKey.(*ecdsa.PrivateKey); !ok {
-		return nil, ErrNotECPrivateKey
+		return nil, ErrNotECPrivateKey(parsedKey)
 	}
-
 	return pkey, nil
 }
 
-// Parse PEM encoded PKCS1 or PKCS8 public key
+// ParseECPublicKeyFromPEM parse PEM encoded PKCS1 or PKCS8 public key
 func ParseECPublicKeyFromPEM(key []byte) (*ecdsa.PublicKey, error) {
 	var err error
 
 	// Parse PEM block
 	var block *pem.Block
 	if block, _ = pem.Decode(key); block == nil {
-		return nil, ErrKeyMustBePEMEncoded
+		return nil, ErrKeyNotPEMEncoded{key: key}
 	}
 
 	// Parse the key
@@ -60,8 +82,7 @@ func ParseECPublicKeyFromPEM(key []byte) (*ecdsa.PublicKey, error) {
 	var pkey *ecdsa.PublicKey
 	var ok bool
 	if pkey, ok = parsedKey.(*ecdsa.PublicKey); !ok {
-		return nil, ErrNotECPublicKey
+		return nil, ErrNotECPublicKey(parsedKey)
 	}
-
 	return pkey, nil
 }

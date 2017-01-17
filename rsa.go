@@ -6,7 +6,7 @@ import (
 	"crypto/rsa"
 )
 
-// Implements the RSA family of signing methods signing methods
+// SigningMethodRSA implements the RSA family of signing methods signing methods
 type SigningMethodRSA struct {
 	Name string
 	Hash crypto.Hash
@@ -39,11 +39,12 @@ func init() {
 	})
 }
 
+// Alg returns the method used
 func (m *SigningMethodRSA) Alg() string {
 	return m.Name
 }
 
-// Implements the Verify method from SigningMethod
+// Verify implements the Verify method from SigningMethod
 // For this signing method, must be an rsa.PublicKey structure.
 func (m *SigningMethodRSA) Verify(signingString, signature string, key interface{}) error {
 	var err error
@@ -58,7 +59,7 @@ func (m *SigningMethodRSA) Verify(signingString, signature string, key interface
 	var ok bool
 
 	if rsaKey, ok = key.(*rsa.PublicKey); !ok {
-		return ErrInvalidKeyType
+		return ErrInvalidKeyType{key: key}
 	}
 
 	// Create hasher
@@ -72,7 +73,7 @@ func (m *SigningMethodRSA) Verify(signingString, signature string, key interface
 	return rsa.VerifyPKCS1v15(rsaKey, m.Hash, hasher.Sum(nil), sig)
 }
 
-// Implements the Sign method from SigningMethod
+// Sign implements the Sign method from SigningMethod
 // For this signing method, must be an rsa.PrivateKey structure.
 func (m *SigningMethodRSA) Sign(signingString string, key interface{}) (string, error) {
 	var rsaKey *rsa.PrivateKey
@@ -80,7 +81,7 @@ func (m *SigningMethodRSA) Sign(signingString string, key interface{}) (string, 
 
 	// Validate type of key
 	if rsaKey, ok = key.(*rsa.PrivateKey); !ok {
-		return "", ErrInvalidKey
+		return "", ErrInvalidKey{key: key}
 	}
 
 	// Create the hasher
@@ -92,9 +93,9 @@ func (m *SigningMethodRSA) Sign(signingString string, key interface{}) (string, 
 	hasher.Write([]byte(signingString))
 
 	// Sign the string and return the encoded bytes
-	if sigBytes, err := rsa.SignPKCS1v15(rand.Reader, rsaKey, m.Hash, hasher.Sum(nil)); err == nil {
-		return EncodeSegment(sigBytes), nil
-	} else {
+	sigBytes, err := rsa.SignPKCS1v15(rand.Reader, rsaKey, m.Hash, hasher.Sum(nil))
+	if err != nil {
 		return "", err
 	}
+	return EncodeSegment(sigBytes), nil
 }

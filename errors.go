@@ -2,14 +2,49 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 )
+
+// ErrKey specific error related to a key
+type ErrKey interface {
+	Error() string
+	Key() interface{}
+}
 
 // Error constants
 var (
-	ErrInvalidKey      = errors.New("key is invalid")
-	ErrInvalidKeyType  = errors.New("key is of invalid type")
 	ErrHashUnavailable = errors.New("the requested hash function is unavailable")
 )
+
+// ErrInvalidKey error used when key could not be validated
+type ErrInvalidKey struct {
+	key interface{}
+}
+
+// Key returns the invalid key
+func (e ErrInvalidKey) Key() interface{} {
+	return e.key
+}
+
+// Returns the formatted error with the invalid key
+func (e ErrInvalidKey) Error() string {
+	return fmt.Sprintf("Key is invalid: %#v", e.key)
+}
+
+// ErrInvalidKeyType error used when key could not be validated
+type ErrInvalidKeyType struct {
+	key interface{}
+}
+
+// Key returns the invalid key
+func (e ErrInvalidKeyType) Key() interface{} {
+	return e.key
+}
+
+// Returns the formatted error with the invalid key
+func (e ErrInvalidKeyType) Error() string {
+	return fmt.Sprintf("Key is of invalid type: %#v", e.key)
+}
 
 // The errors that might occur when parsing and validating a token
 const (
@@ -23,11 +58,11 @@ const (
 	ValidationErrorIssuedAt      // IAT validation failed
 	ValidationErrorIssuer        // ISS validation failed
 	ValidationErrorNotValidYet   // NBF validation failed
-	ValidationErrorId            // JTI validation failed
+	ValidationErrorID            // JTI validation failed
 	ValidationErrorClaimsInvalid // Generic claims validation error
 )
 
-// Helper for constructing a ValidationError with a string error message
+// NewValidationError helper for constructing a ValidationError with a string error message
 func NewValidationError(errorText string, errorFlags uint32) *ValidationError {
 	return &ValidationError{
 		text:   errorText,
@@ -35,7 +70,7 @@ func NewValidationError(errorText string, errorFlags uint32) *ValidationError {
 	}
 }
 
-// The error from Parse if token is not valid
+// ValidationError the error from Parse if token is not valid
 type ValidationError struct {
 	Inner  error  // stores the error returned by external dependencies, i.e.: KeyFunc
 	Errors uint32 // bitfield.  see ValidationError... constants

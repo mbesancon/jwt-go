@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,6 +15,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/request"
 )
 
 // location of the files used for signing and verification
@@ -55,6 +56,10 @@ func init() {
 
 	// Setup listener
 	listener, err := net.ListenTCP("tcp", &net.TCPAddr{})
+	if err != nil {
+		log.Fatalf("Error while listening on tcp: %#v", err)
+		return
+	}
 	serverPort = listener.Addr().(*net.TCPAddr).Port
 
 	log.Println("Listening...")
